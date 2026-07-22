@@ -1,14 +1,5 @@
 """
 FastAPI application entrypoint.
-
-Responsible for:
-  - Creating the FastAPI app instance.
-  - Configuring logging on startup.
-  - Registering API routers.
-  - Registering global exception handlers for domain-specific errors.
-
-Run locally with:
-    uvicorn app.main:app --reload
 """
 
 import logging
@@ -32,23 +23,8 @@ app = FastAPI(
     debug=settings.DEBUG,
 )
 
-# /health is mounted at the root (not under /api/v1) since it's an
-# infrastructure/monitoring endpoint (used by load balancers, Docker
-# healthchecks, uptime monitors), not a versioned business API.
 app.include_router(health_router)
-
-# All business-logic endpoints are versioned under /api/v1
 app.include_router(api_router, prefix="/api/v1")
-
-
-# ---------------------------------------------------------------------------
-# Global exception handlers
-#
-# Domain/service-layer code raises plain Python exceptions (see
-# app/utils/exceptions.py) with no knowledge of HTTP. Handlers here map
-# them to the correct status codes for any endpoint in the app, so this
-# translation logic lives in exactly one place.
-# ---------------------------------------------------------------------------
 
 
 @app.exception_handler(InvalidFileTypeError)

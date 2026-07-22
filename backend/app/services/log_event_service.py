@@ -1,17 +1,5 @@
 """
 Service layer for the Authentication Log Upload feature.
-
-Owns all business logic for turning an uploaded CSV file into
-persisted LogEvent rows:
-  1. Validate the file is a CSV.
-  2. Parse it with pandas.
-  3. Validate required columns are present.
-  4. Transform rows into LogEvent ORM objects.
-  5. Delegate persistence to the repository layer.
-
-Raises domain-specific exceptions (app.utils.exceptions) rather than
-HTTP exceptions — the API layer is responsible for translating those
-into HTTP responses.
 """
 
 import io
@@ -37,22 +25,17 @@ class LogUploadService:
         self.repository = repository
 
     def validate_file_type(self, filename: str | None, content_type: str | None) -> None:
-        """Ensures the uploaded file is a CSV, by extension and (loosely) by content type."""
         if not filename or not filename.lower().endswith(ALLOWED_EXTENSION):
             raise InvalidFileTypeError(
                 f"Invalid file type. Only {ALLOWED_EXTENSION} files are accepted."
             )
 
-        # Some clients (and OS file pickers) send generic/octet-stream content types
-        # for CSVs, so we only hard-reject when a content type is present AND it's
-        # clearly not CSV-like. The extension check above is the primary guard.
         if content_type and content_type not in ALLOWED_CONTENT_TYPES and "csv" not in content_type:
             raise InvalidFileTypeError(
                 f"Invalid file content type '{content_type}'. Only CSV files are accepted."
             )
 
     def parse_csv(self, file_bytes: bytes) -> pd.DataFrame:
-        """Parses raw CSV bytes into a pandas DataFrame."""
         if not file_bytes:
             raise InvalidCSVError("The uploaded file is empty.")
 
@@ -71,17 +54,13 @@ class LogUploadService:
         return df
 
     def validate_columns(self, df: pd.DataFrame) -> None:
-        """Ensures every required column is present in the parsed CSV."""
         missing = [col for col in REQUIRED_CSV_COLUMNS if col not in df.columns]
         if missing:
             raise MissingColumnsError(missing)
 
     def transform_to_models(self, df: pd.DataFrame) -> list[LogEvent]:
-        """Converts validated DataFrame rows into LogEvent ORM instances."""
-        # Keep only the required columns, in a predictable order
         df = df[REQUIRED_CSV_COLUMNS].copy()
 
-        # Normalize types
         df["timestamp"] = pd.to_datetime(df["timestamp"], errors="coerce")
         df["is_privileged"] = df["is_privileged"].apply(self._to_bool)
 
@@ -105,12 +84,6 @@ class LogUploadService:
         return log_events
 
     def process_upload(self, filename: str | None, content_type: str | None, file_bytes: bytes) -> int:
-        """
-        Runs the full upload pipeline and returns the number of rows imported.
-
-        Raises InvalidFileTypeError, InvalidCSVError, or MissingColumnsError
-        on validation failures; any other exception is treated as unexpected.
-        """
         self.validate_file_type(filename, content_type)
         df = self.parse_csv(file_bytes)
         self.validate_columns(df)
@@ -122,7 +95,6 @@ class LogUploadService:
 
     @staticmethod
     def _to_bool(value: object) -> bool:
-        """Coerces common truthy/falsy CSV representations into a real bool."""
         if isinstance(value, bool):
             return value
         if pd.isna(value):

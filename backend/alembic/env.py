@@ -1,12 +1,5 @@
 """
 Alembic environment script.
-
-This wires Alembic to:
-  1. The app's own Settings (so DB credentials come from .env, not a
-     duplicated config).
-  2. The app's declarative Base metadata, including every model
-     registered via `app.models` (so `alembic revision --autogenerate`
-     can detect model changes).
 """
 
 from logging.config import fileConfig
@@ -17,27 +10,18 @@ from sqlalchemy import engine_from_config, pool
 from app.core.config import settings
 from app.db.base import Base
 
-# Import the models package so every model class is registered on
-# Base.metadata before Alembic inspects it. Without this import,
-# autogenerate would see an empty schema even though models exist.
 import app.models  # noqa: F401
 
-# Alembic Config object, provides access to values in alembic.ini
 config = context.config
-
-# Inject the real database URL from app settings (keeps one source of truth)
 config.set_main_option("sqlalchemy.url", settings.DATABASE_URL)
 
-# Interpret the config file for logging
 if config.config_file_name is not None:
     fileConfig(config.config_file_name)
 
-# Target metadata used by 'autogenerate' to detect model changes.
 target_metadata = Base.metadata
 
 
 def run_migrations_offline() -> None:
-    """Run migrations in 'offline' mode (generates SQL without a live DB connection)."""
     url = config.get_main_option("sqlalchemy.url")
     context.configure(
         url=url,
@@ -51,7 +35,6 @@ def run_migrations_offline() -> None:
 
 
 def run_migrations_online() -> None:
-    """Run migrations in 'online' mode (connects directly to the database)."""
     connectable = engine_from_config(
         config.get_section(config.config_ini_section, {}),
         prefix="sqlalchemy.",

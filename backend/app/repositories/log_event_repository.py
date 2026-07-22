@@ -2,14 +2,13 @@
 Repository layer for LogEvent.
 
 The repository's only job is talking to the database. It knows
-nothing about CSV files, HTTP, or validation — that logic lives in
-the service layer (app/services/log_event_service.py). This
-separation keeps persistence concerns isolated and easy to swap or
-test independently.
+nothing about CSV files, HTTP, or detection rules — that logic lives
+in the service layer.
 """
 
 import logging
 
+from sqlalchemy import func
 from sqlalchemy.orm import Session
 
 from app.models.log_event import LogEvent
@@ -24,13 +23,7 @@ class LogEventRepository:
         self.db = db
 
     def bulk_insert(self, log_events: list[LogEvent]) -> int:
-        """
-        Inserts multiple LogEvent rows in a single transaction.
-
-        Returns the number of rows inserted. Rolls back the whole
-        batch if any row fails, so we never end up with a partially
-        imported file.
-        """
+        """Inserts multiple LogEvent rows in a single transaction."""
         if not log_events:
             return 0
 
@@ -44,3 +37,35 @@ class LogEventRepository:
 
         logger.info(f"Inserted {len(log_events)} log events into the database")
         return len(log_events)
+
+    def get_failed_login_events(self) -> list[LogEvent]:
+        """
+        Returns all failed-login LogEvent rows, ordered by username then
+        timestamp (ascending), ready for per-user chronological analysis.
+
+        Matching on login_status is case-insensitive since the value comes
+        from free-text CSV uploads (e.g. "FAILED", "Failed", "failed").
+        """
+        return (
+            self.db.query(LogEvent)
+            .filter(func.lower(LogEvent.login_status) == "failed")
+            .order_by(LogEvent.username.asc(), LogEvent.timestamp.asc())
+            .all()
+        )
+
+    def get_successful_login_events(self) -> list[LogEvent]:
+        """
+        Returns all successful-login LogEvent rows, ordered by username
+        then timestamp (ascending). Used by Impossible Travel, New
+        Device, and Suspicious Privileged Login detection, which all
+        need each username's chronological successful-login history.
+
+        Matching on login_status is case-insensitive since the value comes
+        from free-text CSV uploads (e.g. "SUCCESS", "Success", "success").
+        """
+        return (
+            self.db.query(LogEvent)
+            .filter(func.lower(LogEvent.login_status) == "success")
+            .order_by(LogEvent.username.asc(), LogEvent.timestamp.asc())
+            .all()
+        )

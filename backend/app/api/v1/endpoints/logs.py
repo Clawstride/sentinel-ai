@@ -1,11 +1,5 @@
 """
 Authentication Log Upload endpoint.
-
-POST /logs/upload accepts a CSV file of authentication log events and
-persists each row as a LogEvent. This endpoint only handles HTTP
-concerns (reading the upload, wiring dependencies, translating domain
-exceptions to HTTP responses) — all parsing/validation logic lives in
-the service layer.
 """
 
 import logging
@@ -25,7 +19,6 @@ router = APIRouter(prefix="/logs", tags=["Logs"])
 
 
 def get_log_upload_service(db: Session = Depends(get_db)) -> LogUploadService:
-    """Wires the repository into the service (simple manual DI for this MVP)."""
     repository = LogEventRepository(db)
     return LogUploadService(repository)
 
@@ -40,14 +33,6 @@ async def upload_log_file(
     file: UploadFile = File(..., description="CSV file containing authentication log events"),
     service: LogUploadService = Depends(get_log_upload_service),
 ) -> LogUploadResponse:
-    """
-    Accepts a CSV file, validates it, and bulk-inserts its rows as
-    LogEvent records.
-
-    - **400** if the file is not a CSV, is empty, or cannot be parsed
-    - **422** if required columns are missing from the CSV
-    - **500** for any unexpected error
-    """
     try:
         file_bytes = await file.read()
         rows_imported = service.process_upload(

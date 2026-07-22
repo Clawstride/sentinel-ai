@@ -2,8 +2,7 @@
 LogEvent ORM model.
 
 Represents a single authentication log entry imported from a CSV
-upload (Feature 1: Authentication Log Upload). This is a raw storage
-model only — no detection, scoring, or derived fields belong here.
+upload (Feature 1: Authentication Log Upload).
 """
 
 from datetime import datetime
@@ -20,18 +19,13 @@ class LogEvent(Base):
     __tablename__ = "log_events"
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
-
-    # The time the authentication event actually occurred (from the CSV)
     timestamp: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False, index=True)
-
     username: Mapped[str] = mapped_column(String(255), nullable=False, index=True)
-    ip_address: Mapped[str] = mapped_column(String(45), nullable=False)  # 45 chars fits IPv6
+    ip_address: Mapped[str] = mapped_column(String(45), nullable=False)
     country: Mapped[str] = mapped_column(String(100), nullable=False)
     device: Mapped[str] = mapped_column(String(255), nullable=False)
     login_status: Mapped[str] = mapped_column(String(50), nullable=False)
     is_privileged: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
-
-    # The time this row was inserted into our database (set automatically)
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), server_default=func.now(), nullable=False
     )
