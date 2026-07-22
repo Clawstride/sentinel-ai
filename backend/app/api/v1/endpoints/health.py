@@ -1,9 +1,7 @@
 """
 Health check endpoint.
 
-Used to verify that the API process is up and responding. Later this
-can be extended to check DB connectivity, but for this MVP foundation
-it simply confirms the service is alive.
+Used to verify that the API process is up and responding.
 """
 
 import logging

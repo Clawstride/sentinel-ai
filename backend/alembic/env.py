@@ -4,8 +4,9 @@ Alembic environment script.
 This wires Alembic to:
   1. The app's own Settings (so DB credentials come from .env, not a
      duplicated config).
-  2. The app's declarative Base metadata (so `alembic revision
-     --autogenerate` can detect model changes once models exist).
+  2. The app's declarative Base metadata, including every model
+     registered via `app.models` (so `alembic revision --autogenerate`
+     can detect model changes).
 """
 
 from logging.config import fileConfig
@@ -15,6 +16,11 @@ from sqlalchemy import engine_from_config, pool
 
 from app.core.config import settings
 from app.db.base import Base
+
+# Import the models package so every model class is registered on
+# Base.metadata before Alembic inspects it. Without this import,
+# autogenerate would see an empty schema even though models exist.
+import app.models  # noqa: F401
 
 # Alembic Config object, provides access to values in alembic.ini
 config = context.config
@@ -27,7 +33,6 @@ if config.config_file_name is not None:
     fileConfig(config.config_file_name)
 
 # Target metadata used by 'autogenerate' to detect model changes.
-# Currently empty since no ORM models exist yet in this MVP foundation.
 target_metadata = Base.metadata
 
 

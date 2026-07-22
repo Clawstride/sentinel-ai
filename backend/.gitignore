@@ -1,16 +1,9 @@
-# Environment
 .env
 venv/
 env/
 __pycache__/
 *.pyc
-
-# IDE
 .vscode/
 .idea/
-
-# Logs
 *.log
-
-# Alembic (keep versions, ignore local cache if any)
 alembic/__pycache__/

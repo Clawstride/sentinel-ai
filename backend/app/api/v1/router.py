@@ -8,8 +8,8 @@ import lists.
 
 from fastapi import APIRouter
 
+from app.api.v1.endpoints import logs
+
 api_router = APIRouter()
 
-# Future versioned endpoint routers get included here, e.g.:
-# from app.api.v1.endpoints import cases
-# api_router.include_router(cases.router)
+api_router.include_router(logs.router)
