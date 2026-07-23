@@ -1,0 +1,117 @@
+:root {
+  color-scheme: dark;
+
+  /* ---- Surface scale (deep slate-blue, not pure black) ---- */
+  --bg-canvas: #0c1119;
+  --bg-surface: #121927;
+  --bg-surface-raised: #1a2334;
+  --bg-surface-hover: #212c40;
+  --border-subtle: #263149;
+  --border-strong: #34405c;
+
+  /* ---- Text ---- */
+  --text-primary: #e8edf6;
+  --text-secondary: #94a1b8;
+  --text-muted: #647089;
+
+  /* ---- Brand / interactive accent: calm signal-teal, not neon ---- */
+  --accent: #3fb6c9;
+  --accent-soft: rgba(63, 182, 201, 0.14);
+  --accent-strong: #63cadb;
+
+  /* ---- Severity ---- */
+  --severity-high-bg: rgba(224, 79, 74, 0.16);
+  --severity-high-fg: #f28b85;
+  --severity-medium-bg: rgba(224, 158, 53, 0.16);
+  --severity-medium-fg: #f0b458;
+  --severity-low-bg: rgba(94, 130, 191, 0.16);
+  --severity-low-fg: #8fb0e6;
+
+  /* ---- Status ---- */
+  --status-open-bg: rgba(224, 79, 74, 0.14);
+  --status-open-fg: #f0a19d;
+  --status-investigating-bg: rgba(63, 182, 201, 0.16);
+  --status-investigating-fg: var(--accent-strong);
+  --status-resolved-bg: rgba(87, 178, 118, 0.16);
+  --status-resolved-fg: #7fce9d;
+  --status-falsepositive-bg: rgba(148, 161, 184, 0.14);
+  --status-falsepositive-fg: #a7b2c6;
+
+  /* ---- Type ---- */
+  --font-ui: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica,
+    Arial, sans-serif;
+  --font-mono: ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas,
+    "Liberation Mono", monospace;
+
+  --radius-sm: 6px;
+  --radius-md: 10px;
+  --shadow-panel: 0 1px 2px rgba(0, 0, 0, 0.4), 0 8px 24px rgba(0, 0, 0, 0.24);
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html,
+body,
+#root {
+  height: 100%;
+}
+
+body {
+  margin: 0;
+  background: var(--bg-canvas);
+  color: var(--text-primary);
+  font-family: var(--font-ui);
+  font-size: 14px;
+  line-height: 1.5;
+  -webkit-font-smoothing: antialiased;
+}
+
+h1,
+h2,
+h3,
+h4 {
+  margin: 0;
+  font-weight: 600;
+  letter-spacing: -0.01em;
+}
+
+p {
+  margin: 0;
+}
+
+a {
+  color: inherit;
+}
+
+button {
+  font-family: inherit;
+}
+
+table {
+  border-collapse: collapse;
+  width: 100%;
+}
+
+::selection {
+  background: var(--accent-soft);
+}
+
+:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
+.mono {
+  font-family: var(--font-mono);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.001ms !important;
+    transition-duration: 0.001ms !important;
+  }
+}

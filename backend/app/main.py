@@ -5,6 +5,7 @@ FastAPI application entrypoint.
 import logging
 
 from fastapi import FastAPI, Request, status
+from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 
 from app.api.v1.endpoints.health import router as health_router
@@ -21,6 +22,17 @@ app = FastAPI(
     description="AI-powered Security Investigation Assistant — backend API.",
     version="0.1.0",
     debug=settings.DEBUG,
+)
+
+app.add_middleware(
+    CORSMiddleware,
+    # Local Vite dev servers only. This is the minimum change needed to let
+    # the SentinelAI frontend (localhost:5173) call this API during
+    # development; it does not affect any other backend behavior.
+    allow_origins=["http://localhost:5173", "http://127.0.0.1:5173"],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
 )
 
 app.include_router(health_router)
