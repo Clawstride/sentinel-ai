@@ -1,0 +1,9 @@
+timestamp,username,ip_address,country,device,login_status,is_privileged
+2026-07-22T10:00:00,alice,192.168.1.10,India,Laptop,Failed,false
+2026-07-22T10:01:00,alice,192.168.1.10,India,Laptop,Failed,false
+2026-07-22T10:03:00,alice,192.168.1.10,India,Laptop,Failed,false
+2026-07-22T10:05:00,alice,192.168.1.10,India,Laptop,Failed,false
+2026-07-22T10:08:00,alice,192.168.1.10,India,Laptop,Failed,false
+2026-07-22T10:15:00,bob,192.168.1.20,India,Desktop,Success,false
+2026-07-22T10:20:00,charlie,192.168.1.30,USA,Laptop,Failed,false
+2026-07-22T10:25:00,charlie,192.168.1.30,USA,Laptop,Success,false

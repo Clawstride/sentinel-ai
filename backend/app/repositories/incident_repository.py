@@ -66,3 +66,13 @@ class IncidentRepository:
     def get_by_incident_id(self, incident_id: str) -> Incident | None:
         """Returns a single incident by its human-friendly incident_id, or None."""
         return self.db.query(Incident).filter(Incident.incident_id == incident_id).first()
+
+    def save(self, incident: Incident) -> Incident:
+        """
+        Persists changes made to an already-fetched Incident (e.g. after
+        setting .status or .notes). `updated_at` bumps automatically via
+        the model's onupdate=func.now().
+        """
+        self.db.commit()
+        self.db.refresh(incident)
+        return incident

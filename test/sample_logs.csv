@@ -1,0 +1,4 @@
+timestamp,username,ip_address,country,device,login_status,is_privileged
+2026-07-22T10:00:00,alice,192.168.1.10,Laptop,Success,false
+2026-07-22T10:01:00,bob,192.168.1.11,Desktop,Failed,false
+2026-07-22T10:02:00,admin,45.67.89.100,Laptop,Success,true

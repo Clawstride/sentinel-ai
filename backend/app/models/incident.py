@@ -8,7 +8,7 @@ storage model — no detection logic or AI summarization belongs here.
 
 from datetime import datetime
 
-from sqlalchemy import DateTime, Integer, String, func
+from sqlalchemy import DateTime, Integer, String, Text, func
 from sqlalchemy.orm import Mapped, mapped_column
 
 from app.db.base import Base
@@ -34,6 +34,20 @@ class Incident(Base):
 
     username: Mapped[str] = mapped_column(String(255), nullable=False, index=True)
     source_ip: Mapped[str | None] = mapped_column(String(45), nullable=True)
+
+    # The evidence window this incident was built from: the span of
+    # LogEvent timestamps that back it up. For range-based detections
+    # (Brute Force, Impossible Travel) this is the first/last event of
+    # the burst; for point detections (New Device, Privileged Login)
+    # window_end is the triggering event and window_start is the prior
+    # baseline event used for comparison (or the same timestamp if no
+    # baseline exists). This is what the investigation endpoint uses to
+    # reconstruct the timeline — see InvestigationService.
+    window_start: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    window_end: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+
+    # Free-text analyst notes (Investigation Workspace, Feature 6).
+    notes: Mapped[str | None] = mapped_column(Text, nullable=True)
 
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), server_default=func.now(), nullable=False

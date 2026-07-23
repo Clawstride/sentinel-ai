@@ -24,6 +24,13 @@ class Settings(BaseSettings):
 
     LOG_LEVEL: str = "INFO"
 
+    # Optional: powers the AI-assisted incident summary
+    # (app/services/investigation/ai_summary.py). If unset, the app
+    # falls back to a deterministic, template-based summary — the
+    # investigation endpoint works either way.
+    ANTHROPIC_API_KEY: str | None = None
+    AI_SUMMARY_MODEL: str = "claude-haiku-4-5-20251001"
+
     model_config = SettingsConfigDict(
         env_file=".env",
         env_file_encoding="utf-8",

@@ -7,6 +7,7 @@ in the service layer.
 """
 
 import logging
+from datetime import datetime
 
 from sqlalchemy import func
 from sqlalchemy.orm import Session
@@ -67,5 +68,27 @@ class LogEventRepository:
             self.db.query(LogEvent)
             .filter(func.lower(LogEvent.login_status) == "success")
             .order_by(LogEvent.username.asc(), LogEvent.timestamp.asc())
+            .all()
+        )
+
+    def get_events_for_username_in_window(
+        self, username: str, start: datetime, end: datetime
+    ) -> list[LogEvent]:
+        """
+        Returns every LogEvent for one username with a timestamp between
+        `start` and `end` (inclusive), ordered chronologically.
+
+        Used by the Investigation Workspace to reconstruct the evidence
+        timeline behind an incident, using the incident's stored
+        window_start/window_end.
+        """
+        return (
+            self.db.query(LogEvent)
+            .filter(
+                LogEvent.username == username,
+                LogEvent.timestamp >= start,
+                LogEvent.timestamp <= end,
+            )
+            .order_by(LogEvent.timestamp.asc())
             .all()
         )

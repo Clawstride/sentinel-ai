@@ -7,10 +7,16 @@ it already works — no detection service is modified — and treats each
 one purely as a data source. Adding a future 5th detection rule means
 adding one constructor argument and one `_process_*` method here; nothing
 about the existing rules changes.
+
+Also computes each incident's evidence window (window_start/window_end)
+at creation time, which the Investigation Workspace later uses to
+reconstruct the timeline (see app/services/investigation_service.py).
 """
 
 import logging
+from datetime import datetime
 
+from sqlalchemy import func
 from sqlalchemy.orm import Session
 
 from app.models.incident import Incident
@@ -47,11 +53,11 @@ class IncidentService:
         self.impossible_travel_service = impossible_travel_service
         self.new_device_service = new_device_service
         self.privileged_login_service = privileged_login_service
-        # A read-only lookup against LogEvent (to find the source IP for a
-        # brute-force detection, which has no IP of its own) is done
-        # directly here rather than via LogEventRepository, so that
-        # repository -- part of the already-complete upload feature --
-        # stays untouched.
+        # A couple of small read-only lookups against LogEvent (source IP
+        # for brute force; the prior baseline event for point-in-time
+        # detections) are done directly here rather than via
+        # LogEventRepository, so that repository -- part of the
+        # already-complete upload feature -- stays untouched.
         self.db = db
 
     def generate_incidents(self) -> int:
@@ -77,13 +83,29 @@ class IncidentService:
         """Returns a single incident by its incident_id, or None if not found."""
         return self.repository.get_by_incident_id(incident_id)
 
+    def update_status(self, incident_id: str, new_status: str) -> Incident | None:
+        """Updates an incident's status. Returns the updated incident, or None if not found."""
+        incident = self.repository.get_by_incident_id(incident_id)
+        if incident is None:
+            return None
+        incident.status = new_status
+        return self.repository.save(incident)
+
+    def update_notes(self, incident_id: str, notes: str) -> Incident | None:
+        """Updates an incident's analyst notes. Returns the updated incident, or None if not found."""
+        incident = self.repository.get_by_incident_id(incident_id)
+        if incident is None:
+            return None
+        incident.notes = notes
+        return self.repository.save(incident)
+
     # ------------------------------------------------------------------
     # Per-rule processing
     #
     # Each method runs one detection rule and creates incidents for its
     # results. Kept separate (rather than one generic loop) because each
-    # detection schema has different fields to build a title/source_ip
-    # from.
+    # detection schema has different fields to build a title/source_ip/
+    # evidence window from.
     # ------------------------------------------------------------------
 
     def _process_bruteforce_detections(self) -> int:
@@ -91,7 +113,15 @@ class IncidentService:
         for detection in self.brute_force_service.detect():
             title = self._build_bruteforce_title(detection)
             source_ip = self._lookup_bruteforce_source_ip(detection)
-            if self._create_incident_if_new(detection.username, detection.detection_type.value, title, detection.risk_score, source_ip):
+            if self._create_incident_if_new(
+                username=detection.username,
+                incident_type=detection.detection_type.value,
+                title=title,
+                risk_score=detection.risk_score,
+                source_ip=source_ip,
+                window_start=detection.first_attempt_timestamp,
+                window_end=detection.last_attempt_timestamp,
+            ):
                 created += 1
         return created
 
@@ -99,7 +129,15 @@ class IncidentService:
         created = 0
         for detection in self.impossible_travel_service.detect():
             title = self._build_impossible_travel_title(detection)
-            if self._create_incident_if_new(detection.username, detection.detection_type.value, title, detection.risk_score, detection.current_ip_address):
+            if self._create_incident_if_new(
+                username=detection.username,
+                incident_type=detection.detection_type.value,
+                title=title,
+                risk_score=detection.risk_score,
+                source_ip=detection.current_ip_address,
+                window_start=detection.previous_timestamp,
+                window_end=detection.current_timestamp,
+            ):
                 created += 1
         return created
 
@@ -107,7 +145,16 @@ class IncidentService:
         created = 0
         for detection in self.new_device_service.detect():
             title = self._build_new_device_title(detection)
-            if self._create_incident_if_new(detection.username, detection.detection_type.value, title, detection.risk_score, detection.ip_address):
+            window_start = self._lookup_previous_successful_timestamp(detection.username, detection.timestamp)
+            if self._create_incident_if_new(
+                username=detection.username,
+                incident_type=detection.detection_type.value,
+                title=title,
+                risk_score=detection.risk_score,
+                source_ip=detection.ip_address,
+                window_start=window_start,
+                window_end=detection.timestamp,
+            ):
                 created += 1
         return created
 
@@ -115,7 +162,16 @@ class IncidentService:
         created = 0
         for detection in self.privileged_login_service.detect():
             title = self._build_privileged_login_title(detection)
-            if self._create_incident_if_new(detection.username, detection.detection_type.value, title, detection.risk_score, detection.ip_address):
+            window_start = self._lookup_previous_successful_timestamp(detection.username, detection.timestamp)
+            if self._create_incident_if_new(
+                username=detection.username,
+                incident_type=detection.detection_type.value,
+                title=title,
+                risk_score=detection.risk_score,
+                source_ip=detection.ip_address,
+                window_start=window_start,
+                window_end=detection.timestamp,
+            ):
                 created += 1
         return created
 
@@ -130,6 +186,8 @@ class IncidentService:
         title: str,
         risk_score: int,
         source_ip: str | None,
+        window_start: datetime,
+        window_end: datetime,
     ) -> bool:
         """
         Creates an Incident for this detection unless one already exists
@@ -149,6 +207,8 @@ class IncidentService:
             status="Open",
             username=username,
             source_ip=source_ip,
+            window_start=window_start,
+            window_end=window_end,
         )
         self.repository.create(incident)
         return True
@@ -218,3 +278,25 @@ class IncidentService:
             .first()
         )
         return event.ip_address if event else None
+
+    def _lookup_previous_successful_timestamp(self, username: str, before_timestamp: datetime) -> datetime:
+        """
+        Finds the timestamp of this username's most recent successful
+        login strictly before `before_timestamp`, used as window_start
+        for the point-in-time detections (New Device, Privileged Login)
+        so their investigation timeline shows the prior baseline event
+        next to the triggering one. Falls back to `before_timestamp`
+        itself if there's no earlier successful login (e.g. this was the
+        user's first-ever login involved in the detection).
+        """
+        event = (
+            self.db.query(LogEvent)
+            .filter(
+                LogEvent.username == username,
+                func.lower(LogEvent.login_status) == "success",
+                LogEvent.timestamp < before_timestamp,
+            )
+            .order_by(LogEvent.timestamp.desc())
+            .first()
+        )
+        return event.timestamp if event else before_timestamp

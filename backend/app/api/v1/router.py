@@ -8,10 +8,11 @@ import lists.
 
 from fastapi import APIRouter
 
-from app.api.v1.endpoints import detections, incidents, logs
+from app.api.v1.endpoints import dashboard, detections, incidents, logs
 
 api_router = APIRouter()
 
 api_router.include_router(logs.router)
 api_router.include_router(detections.router)
 api_router.include_router(incidents.router)
+api_router.include_router(dashboard.router)
